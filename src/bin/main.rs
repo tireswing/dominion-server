@@ -63,6 +63,7 @@ pub async fn main() -> Result<()> {
                 SymmetricalJson::default()
             );
 
+        // Collect message channels into struct
         let mut message_channels = ServerMessageChannels {
             broadcast_sender,
             broadcast_receiver,

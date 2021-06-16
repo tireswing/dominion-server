@@ -42,14 +42,13 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
                     let message = serde_json::to_value(ServerMessage::NotEnoughPlayers).unwrap();
                     message_channels.broadcast_sender.send((message, recipients)).unwrap();
                 }
-                _ => {
-                    panic!("Unknown error while starting!")
+                Err(e) => {
+                    panic!("Unknown error while starting: {:?}", e);
                 }
             }
         }
         ClientMessage::PlayCard { index } => {
             let data = data.clone();
-            // TODO: play the card
             play_card(data, player_number, index, &mut message_channels.value_sender).await;
         }
 
