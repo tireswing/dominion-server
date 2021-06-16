@@ -1,5 +1,5 @@
 use dominion::prelude::*;
-use dominion_server::api::{ClientMessage, ServerMessage};
+use dominion_server::api::*;
 
 use std::sync::{Arc, Mutex};
 
@@ -49,7 +49,7 @@ pub async fn main() -> Result<()> {
 
         let player_number = player_count;
         let player = Player::new_with_default_deck(player_number);
-        println!("Player #{} joined with UUID: {}", &player.number, &player.uuid);
+        println!("Player #{} joined with UUID: {}", &player.player_number, &player.uuid);
         player_count += 1;
 
         let new_data = Arc::clone(&data);
@@ -92,14 +92,14 @@ pub async fn main() -> Result<()> {
                             match msg {
                                 ClientMessage::Ping => {
                                     println!("Got a ping from player {}!", player_number);
-                                    serialized.send(serde_json::to_value(&ServerMessage::PingResponse).unwrap()).await.unwrap();
+                                    serialized.send(serde_json::to_value(ServerMessage::PingResponse).unwrap()).await.unwrap();
                                 }
                                 ClientMessage::ChatMessage{ message } => {
                                     let game = new_data.lock().unwrap();
                                     let player_count = game.player_count();
                                     // let sender = &game.players[player_number];
                                     // let author = sender.uuid;
-                                    let message = serde_json::to_value(&ServerMessage::ChatMessage{ author: player_number, message }).unwrap();
+                                    let message = serde_json::to_value(ServerMessage::ChatMessage{ author: player_number, message }).unwrap();
                                     let recipients = everyone_but(player_count, player_number);
                                     tx.send((message, recipients)).unwrap();
                                 }
@@ -107,7 +107,7 @@ pub async fn main() -> Result<()> {
                                     let mut game = new_data.lock().unwrap();
                                     if game.started {
                                         let recipients = single_recipient(player_number);
-                                        let message = serde_json::to_value(&ServerMessage::GameAlreadyStarted).unwrap();
+                                        let message = serde_json::to_value(ServerMessage::GameAlreadyStarted).unwrap();
                                         tx.send((message, recipients)).unwrap();
                                         continue;
                                     }
@@ -118,13 +118,13 @@ pub async fn main() -> Result<()> {
                                             for i in 0..game.player_count() {
                                                 let recipients = single_recipient(i);
                                                 let state = game.partial_game(i);
-                                                let message = serde_json::to_value(&ServerMessage::StartingGame { state }).unwrap();
+                                                let message = serde_json::to_value(ServerMessage::StartingGame { state }).unwrap();
                                                 tx.send((message, recipients)).unwrap();
                                             }
                                         }
                                         Err(NotEnoughPlayers) => {
                                             let recipients = single_recipient(player_number);
-                                            let message = serde_json::to_value(&ServerMessage::NotEnoughPlayers).unwrap();
+                                            let message = serde_json::to_value(ServerMessage::NotEnoughPlayers).unwrap();
                                             tx.send((message, recipients)).unwrap();
                                         }
                                         _ => {
@@ -134,9 +134,34 @@ pub async fn main() -> Result<()> {
                                 }
                                 ClientMessage::PlayCard { index } => {
                                     // TODO: play the card
-                                    let game = new_data.lock().unwrap();
-                                    let player = &game.players[player_number];
-                                    let card = player.hand[index].clone();
+                                    let (current_turn, player, phase, card);
+                                    {
+                                        let game = new_data.lock().unwrap();
+                                        current_turn = game.current_turn;
+                                        player = &game.players[player_number];
+                                        phase = player.phase;
+                                        card = player.hand[index].clone();
+                                    }
+
+                                    if current_turn != player_number {
+                                        serialized.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
+                                        continue;
+                                    }
+
+                                    match phase {
+                                        Phase::ActionPhase => {
+                                            if !card.is_action() {
+                                                serialized.send(serde_json::to_value(ServerMessage::IllegalPlay { card: card.clone(), reason: IllegalPlayReason::WrongPhase }).unwrap()).await.unwrap();
+                                            }
+                                        }
+                                        Phase::BuyPhase => {
+                                            if !card.is_treasure() {
+                                                serialized.send(serde_json::to_value(ServerMessage::IllegalPlay { card: card.clone(), reason: IllegalPlayReason::WrongPhase }).unwrap()).await.unwrap();
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+
                                     println!("Player {} played {}!", player_number, card.name());
                                 }
 
