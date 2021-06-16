@@ -3,7 +3,7 @@ use dominion::prelude::*;
 
 use std::sync::{Arc, Mutex};
 
-pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index: usize, serialized: &mut Serialized) {
+pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index: usize, serialized: &mut ValueSender) {
     let (current_turn, player, phase, card);
     {
         let game = data.lock().unwrap();

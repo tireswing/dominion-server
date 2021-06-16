@@ -63,15 +63,21 @@ pub async fn main() -> Result<()> {
         let socket = TcpStream::from_std(socket)?;
         let socket2 = TcpStream::from_std(socket2)?;
 
-        let length_delimited = FramedRead::new(socket, LengthDelimitedCodec::new());
-        let mut deserialized = tokio_serde::SymmetricallyFramed::new(
-            length_delimited,
-            SymmetricalJson::<ClientMessage>::default(),
-        );
+        let length_delimited =
+            FramedRead::new(socket, LengthDelimitedCodec::new());
+        let mut deserialized: ClientMessageReceiver =
+            tokio_serde::SymmetricallyFramed::new(
+                length_delimited,
+                SymmetricalJson::<ClientMessage>::default(),
+            );
 
-        let length_delimited = FramedWrite::new(socket2, LengthDelimitedCodec::new());
-        let mut serialized =
-            tokio_serde::SymmetricallyFramed::new(length_delimited, SymmetricalJson::default());
+        let length_delimited =
+            FramedWrite::new(socket2, LengthDelimitedCodec::new());
+        let mut serialized: ValueSender =
+            tokio_serde::SymmetricallyFramed::new(
+                length_delimited,
+                SymmetricalJson::default()
+            );
 
         tokio::spawn(async move {
             loop {
