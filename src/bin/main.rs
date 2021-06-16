@@ -51,9 +51,9 @@ pub async fn main() -> Result<()> {
         println!("Player #{} joined with UUID: {}", &player.player_number, &player.uuid);
         player_count += 1;
 
-        let new_data = Arc::clone(&data);
+        let data = Arc::clone(&data);
         {
-            let mut game = new_data.lock().unwrap();
+            let mut game = data.lock().unwrap();
             game.add_player(player);
         }
 
@@ -100,7 +100,7 @@ pub async fn main() -> Result<()> {
                                     serialized.send(serde_json::to_value(ServerMessage::PingResponse).unwrap()).await.unwrap();
                                 }
                                 ClientMessage::ChatMessage{ message } => {
-                                    let game = new_data.lock().unwrap();
+                                    let game = data.lock().unwrap();
                                     let player_count = game.player_count();
                                     // let sender = &game.players[player_number];
                                     // let author = sender.uuid;
@@ -109,7 +109,7 @@ pub async fn main() -> Result<()> {
                                     tx.send((message, recipients)).unwrap();
                                 }
                                 ClientMessage::StartGame { supply_list } => {
-                                    let mut game = new_data.lock().unwrap();
+                                    let mut game = data.lock().unwrap();
                                     if game.started {
                                         let recipients = single_recipient(player_number);
                                         let message = serde_json::to_value(ServerMessage::GameAlreadyStarted).unwrap();
@@ -138,7 +138,7 @@ pub async fn main() -> Result<()> {
                                     }
                                 }
                                 ClientMessage::PlayCard { index } => {
-                                    let data = new_data.clone();
+                                    let data = data.clone();
                                     // TODO: play the card
                                     play_card(data, player_number, index, &mut serialized).await;
                                 }
