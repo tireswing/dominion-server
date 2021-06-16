@@ -1,13 +1,12 @@
 use dominion::prelude::*;
-use dominion_server::api::*;
+use dominion_server::prelude::*;
 
 use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
-use futures::prelude::*;
 use serde_json::Value;
 use tokio::{net::{TcpListener, TcpStream}, sync::broadcast};
-use tokio_serde::formats::*;
+use tokio_serde::formats::SymmetricalJson;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
 
 
@@ -133,36 +132,9 @@ pub async fn main() -> Result<()> {
                                     }
                                 }
                                 ClientMessage::PlayCard { index } => {
+                                    let data = new_data.clone();
                                     // TODO: play the card
-                                    let (current_turn, player, phase, card);
-                                    {
-                                        let game = new_data.lock().unwrap();
-                                        current_turn = game.current_turn;
-                                        player = &game.players[player_number];
-                                        phase = player.phase;
-                                        card = player.hand[index].clone();
-                                    }
-
-                                    if current_turn != player_number {
-                                        serialized.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
-                                        continue;
-                                    }
-
-                                    match phase {
-                                        Phase::ActionPhase => {
-                                            if !card.is_action() {
-                                                serialized.send(serde_json::to_value(ServerMessage::IllegalPlay { card: card.clone(), reason: IllegalPlayReason::WrongPhase }).unwrap()).await.unwrap();
-                                            }
-                                        }
-                                        Phase::BuyPhase => {
-                                            if !card.is_treasure() {
-                                                serialized.send(serde_json::to_value(ServerMessage::IllegalPlay { card: card.clone(), reason: IllegalPlayReason::WrongPhase }).unwrap()).await.unwrap();
-                                            }
-                                        }
-                                        _ => {}
-                                    }
-
-                                    println!("Player {} played {}!", player_number, card.name());
+                                    play_card(data, player_number, index, &mut serialized).await;
                                 }
 
                                 _ => {
