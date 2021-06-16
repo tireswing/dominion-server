@@ -65,7 +65,7 @@ pub async fn main() -> Result<()> {
 
         let length_delimited =
             FramedRead::new(socket, LengthDelimitedCodec::new());
-        let mut deserialized: ClientMessageReceiver =
+        let mut client_message_receiver: ClientMessageReceiver =
             tokio_serde::SymmetricallyFramed::new(
                 length_delimited,
                 SymmetricalJson::<ClientMessage>::default(),
@@ -73,7 +73,7 @@ pub async fn main() -> Result<()> {
 
         let length_delimited =
             FramedWrite::new(socket2, LengthDelimitedCodec::new());
-        let mut serialized: ValueSender =
+        let mut value_sender: ValueSender =
             tokio_serde::SymmetricallyFramed::new(
                 length_delimited,
                 SymmetricalJson::default()
@@ -87,17 +87,17 @@ pub async fn main() -> Result<()> {
                         let (value, recipients) = result.unwrap();
 
                         if recipients.contains(&player_number) {
-                            serialized.send(value).await.unwrap();
+                            value_sender.send(value).await.unwrap();
                         }
                     }
 
                     // Messages received from the client
-                    result = deserialized.try_next() => {
+                    result = client_message_receiver.try_next() => {
                         if let Some(msg) = result.unwrap() {
                             match msg {
                                 ClientMessage::Ping => {
                                     println!("Got a ping from player {}!", player_number);
-                                    serialized.send(serde_json::to_value(ServerMessage::PingResponse).unwrap()).await.unwrap();
+                                    value_sender.send(serde_json::to_value(ServerMessage::PingResponse).unwrap()).await.unwrap();
                                 }
                                 ClientMessage::ChatMessage{ message } => {
                                     let game = data.lock().unwrap();
@@ -140,7 +140,7 @@ pub async fn main() -> Result<()> {
                                 ClientMessage::PlayCard { index } => {
                                     let data = data.clone();
                                     // TODO: play the card
-                                    play_card(data, player_number, index, &mut serialized).await;
+                                    play_card(data, player_number, index, &mut value_sender).await;
                                 }
 
                                 _ => {
