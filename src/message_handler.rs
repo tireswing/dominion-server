@@ -49,7 +49,7 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
         }
         ClientMessage::PlayCard { index } => {
             let data = data.clone();
-            play_card(data, player_number, index, message_channels).await;
+            play_card(data, player_number, index, callbacks, message_channels).await;
         }
 
         _ => {
@@ -59,7 +59,7 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
     }
 }
 
-pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index: usize, message_channels: &mut ServerMessageChannels) {
+pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index: usize, callbacks: &Box<dyn Callbacks>, message_channels: &mut ServerMessageChannels) {
     let (current_turn, player, phase, card);
     {
         let game = data.lock().unwrap();
@@ -70,7 +70,7 @@ pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index:
     }
 
     if current_turn != player_number {
-        value_sender.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
+        message_channels.value_sender.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
         return;
     }
 
@@ -86,10 +86,10 @@ pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index:
                     ).unwrap()).await.unwrap();
             }
 
-            let game = data.lock().unwrap();
+            let mut game = data.lock().unwrap();
             // TODO: check reactions
 
-            game.play_action_from_hand(player_number, card_index);
+            game.play_action_from_hand(player_number, card_index, callbacks);
 
         }
         Phase::BuyPhase => {

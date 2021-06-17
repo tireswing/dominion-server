@@ -11,6 +11,8 @@ pub enum ClientMessage {
     PlayCard { index: usize },
     BuyCard { card: Box<dyn Card> },
     EndTurn,
+    React { card: Box<dyn Card> },
+    NoMoreReactions,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
