@@ -59,7 +59,7 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
     }
 }
 
-pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index: usize, serialized: &mut ValueSender) {
+pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index: usize, value_sender: &mut ValueSender) {
     let (current_turn, player, phase, card);
     {
         let game = data.lock().unwrap();
@@ -70,19 +70,19 @@ pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index:
     }
 
     if current_turn != player_number {
-        serialized.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
+        value_sender.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
         return;
     }
 
     match phase {
         Phase::ActionPhase => {
             if !card.is_action() {
-                serialized.send(serde_json::to_value(ServerMessage::IllegalPlay { card: card.clone(), reason: IllegalPlayReason::WrongPhase }).unwrap()).await.unwrap();
+                value_sender.send(serde_json::to_value(ServerMessage::IllegalPlay { card: card.clone(), reason: IllegalPlayReason::WrongPhase }).unwrap()).await.unwrap();
             }
         }
         Phase::BuyPhase => {
             if !card.is_treasure() {
-                serialized.send(serde_json::to_value(ServerMessage::IllegalPlay { card: card.clone(), reason: IllegalPlayReason::WrongPhase }).unwrap()).await.unwrap();
+                value_sender.send(serde_json::to_value(ServerMessage::IllegalPlay { card: card.clone(), reason: IllegalPlayReason::WrongPhase }).unwrap()).await.unwrap();
             }
         }
         _ => {}
