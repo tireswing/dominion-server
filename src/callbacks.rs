@@ -1,14 +1,11 @@
 use dominion::prelude::*;
 
 #[derive(Clone, Debug)]
-pub struct ServerBridge;
-
-impl ServerBridge {
-    pub fn new() -> ServerBridge {
-        ServerBridge
-    }
+pub struct ServerBridge {
+    // TODO: add channels
 }
 
+#[allow(unused_variables)]
 impl Callbacks for ServerBridge {
     fn choose_card_from_supply(&self, supply: &Supply) -> Option<Box<dyn Card>> {
         todo!();

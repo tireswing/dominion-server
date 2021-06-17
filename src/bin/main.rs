@@ -19,7 +19,8 @@ pub async fn main() -> Result<()> {
     let data = Arc::new(Mutex::new(Game::new()));
     let mut player_count = 0;
 
-    let callbacks: Box<dyn Callbacks> = Box::new(ServerBridge::new());
+    let bridge = ServerBridge {};
+    let callbacks: Box<dyn Callbacks> = Box::new(bridge);
 
     loop {
         let (socket, _addr) = listener.accept().await?;

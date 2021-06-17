@@ -89,7 +89,7 @@ pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index:
             let mut game = data.lock().unwrap();
             // TODO: check reactions
 
-            game.play_action_from_hand(player_number, card_index, callbacks);
+            game.play_action_from_hand(player_number, card_index, callbacks).unwrap();
 
         }
         Phase::BuyPhase => {
