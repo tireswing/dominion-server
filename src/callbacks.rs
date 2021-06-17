@@ -1,7 +1,13 @@
 use dominion::prelude::*;
 
 #[derive(Clone, Debug)]
-pub struct ServerBridge {}
+pub struct ServerBridge;
+
+impl ServerBridge {
+    pub fn new() -> ServerBridge {
+        ServerBridge
+    }
+}
 
 impl Callbacks for ServerBridge {
     fn choose_card_from_supply(&self, supply: &Supply) -> Option<Box<dyn Card>> {

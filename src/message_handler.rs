@@ -3,7 +3,7 @@ use dominion::prelude::*;
 
 use std::sync::{Arc, Mutex};
 
-pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, player_number: usize, message_channels: &mut ServerMessageChannels) {
+pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, player_number: usize, callbacks: &Box<dyn Callbacks>, message_channels: &mut ServerMessageChannels) {
     match msg {
         ClientMessage::Ping => {
             println!("Got a ping from player {}!", player_number);

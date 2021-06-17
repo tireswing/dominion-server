@@ -19,6 +19,8 @@ pub async fn main() -> Result<()> {
     let data = Arc::new(Mutex::new(Game::new()));
     let mut player_count = 0;
 
+    let callbacks: Box<dyn Callbacks> = Box::new(ServerBridge::new());
+
     loop {
         let (socket, _addr) = listener.accept().await?;
 
@@ -71,6 +73,8 @@ pub async fn main() -> Result<()> {
             client_message_receiver
         };
 
+        let callbacks = callbacks.clone();
+
         tokio::spawn(async move {
             loop {
                 tokio::select! {
@@ -93,7 +97,7 @@ pub async fn main() -> Result<()> {
                     result = message_channels.client_message_receiver.try_next() => {
                         if let Some(msg) = result.unwrap() {
                             let data = data.clone();
-                            handle_client_message(msg, data, player_number, &mut message_channels).await;
+                            handle_client_message(msg, data, player_number, &callbacks, &mut message_channels).await;
                         }
                     }
                 }
