@@ -21,7 +21,7 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
         ClientMessage::StartGame { supply_list } => {
             let mut game = data.lock().unwrap();
             if game.started {
-                let recipients = single_recipient(player_number);
+                let recipients = Recipients::SingleRecipient { recipient: player_number };
                 let message = serde_json::to_value(ServerMessage::GameAlreadyStarted).unwrap();
                 message_channels.broadcast_sender.send((message, recipients)).unwrap();
                 return;
@@ -30,15 +30,15 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
             match game.generate_supply(supply_list) {
                 Ok(()) => {
                     game.started = true;
-                    for i in 0..game.player_count() {
-                        let recipients = single_recipient(i);
-                        let state = game.partial_game(i);
+                    for player_number in 0..game.player_count() {
+                        let recipients = Recipients::SingleRecipient { recipient: player_number };
+                        let state = game.partial_game(player_number);
                         let message = serde_json::to_value(ServerMessage::StartingGame { state }).unwrap();
                         message_channels.broadcast_sender.send((message, recipients)).unwrap();
                     }
                 }
                 Err(NotEnoughPlayers) => {
-                    let recipients = single_recipient(player_number);
+                    let recipients = Recipients::SingleRecipient { recipient: player_number };
                     let message = serde_json::to_value(ServerMessage::NotEnoughPlayers).unwrap();
                     message_channels.broadcast_sender.send((message, recipients)).unwrap();
                 }

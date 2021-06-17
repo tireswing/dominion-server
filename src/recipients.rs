@@ -1,16 +1,15 @@
-pub type Recipients = Vec<usize>;
+use serde::{Serialize, Deserialize};
 
-pub fn single_recipient(player_number: usize) -> Recipients {
-    vec![player_number]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum Recipients {
+    SingleRecipient { recipient: usize },
+    MultipleRecipients { recipients: Vec<usize> },
+    Everyone,
 }
 
 pub fn everyone_but(player_count: usize, player_number: usize) -> Recipients {
-    let mut v = everyone(player_count);
-    v.remove(player_number);
+    let mut recipients = (0..player_count).collect::<Vec<usize>>();
+    recipients.remove(player_number);
 
-    v
-}
-
-pub fn everyone(player_count: usize) -> Recipients {
-    (0..player_count).collect::<Vec<usize>>()
+    Recipients::MultipleRecipients { recipients }
 }

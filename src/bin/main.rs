@@ -78,7 +78,13 @@ pub async fn main() -> Result<()> {
                     result = message_channels.broadcast_receiver.recv() => {
                         let (value, recipients) = result.unwrap();
 
-                        if recipients.contains(&player_number) {
+                        let should_send = match recipients {
+                            Recipients::Everyone => true,
+                            Recipients::SingleRecipient { recipient } => recipient == player_number,
+                            Recipients::MultipleRecipients { recipients } => recipients.contains(&player_number),
+                        };
+
+                        if should_send {
                             message_channels.value_sender.send(value).await.unwrap();
                         }
                     }

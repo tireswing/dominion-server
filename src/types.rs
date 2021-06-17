@@ -1,4 +1,4 @@
-use crate::api::{ClientMessage, ServerMessage};
+use crate::prelude::*;
 
 use serde_json::Value;
 use tokio::{net::TcpStream, sync::broadcast::{Receiver, Sender}};
@@ -13,8 +13,8 @@ pub type ServerMessageReceiver = MessageReceiver<ServerMessage>;
 pub type ValueSender = MessageSender<Value>;
 
 pub struct ServerMessageChannels {
-    pub broadcast_sender: Sender<(Value, Vec<usize>)>,
-    pub broadcast_receiver: Receiver<(Value, Vec<usize>)>,
+    pub broadcast_sender: Sender<(Value, Recipients)>,
+    pub broadcast_receiver: Receiver<(Value, Recipients)>,
     pub value_sender: ValueSender,
     pub client_message_receiver: ClientMessageReceiver,
 }
