@@ -9,6 +9,7 @@ pub enum ClientMessage {
     ChatMessage { message: String },
     StartGame { supply_list: CardList },
     PlayCard { index: usize },
+    BuyCard { card: Box<dyn Card> },
     EndTurn,
 }
 
@@ -23,6 +24,8 @@ pub enum ServerMessage {
     NotEnoughPlayers,
     NotYourTurn,
     IllegalPlay { card: Box<dyn Card>, reason: IllegalPlayReason },
+    NotEnoughCoins,
+    SupplyPileEmpty,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

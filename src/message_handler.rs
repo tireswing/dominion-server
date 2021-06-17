@@ -49,7 +49,7 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
         }
         ClientMessage::PlayCard { index } => {
             let data = data.clone();
-            play_card(data, player_number, index, &mut message_channels.value_sender).await;
+            play_card(data, player_number, index, message_channels).await;
         }
 
         _ => {
@@ -59,7 +59,7 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
     }
 }
 
-pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index: usize, value_sender: &mut ValueSender) {
+pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index: usize, message_channels: &mut ServerMessageChannels) {
     let (current_turn, player, phase, card);
     {
         let game = data.lock().unwrap();
@@ -77,12 +77,28 @@ pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index:
     match phase {
         Phase::ActionPhase => {
             if !card.is_action() {
-                value_sender.send(serde_json::to_value(ServerMessage::IllegalPlay { card: card.clone(), reason: IllegalPlayReason::WrongPhase }).unwrap()).await.unwrap();
+                message_channels.value_sender.send(
+                    serde_json::to_value(
+                        ServerMessage::IllegalPlay {
+                            card: card.clone(),
+                            reason: IllegalPlayReason::WrongPhase
+                        }
+                    ).unwrap()).await.unwrap();
             }
+
+            let game = data.lock().unwrap();
+            // TODO: check reactions
+
+            game.play_action_from_hand(player_number, card_index);
+
         }
         Phase::BuyPhase => {
             if !card.is_treasure() {
-                value_sender.send(serde_json::to_value(ServerMessage::IllegalPlay { card: card.clone(), reason: IllegalPlayReason::WrongPhase }).unwrap()).await.unwrap();
+                message_channels.value_sender.send(serde_json::to_value(
+                    ServerMessage::IllegalPlay {
+                        card: card.clone(),
+                        reason: IllegalPlayReason::WrongPhase
+                    }).unwrap()).await.unwrap();
             }
         }
         _ => {}
