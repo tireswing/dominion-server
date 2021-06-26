@@ -1,14 +1,36 @@
 use dominion::prelude::*;
+use crate::prelude::*;
+
+use std::mem::{self, Discriminant};
+use tokio::sync::mpsc;
 
 #[derive(Clone, Debug)]
 pub struct ServerBridge {
-    // TODO: add channels
+    pub sender: BroadcastSender,
+}
+
+pub struct BridgeResponse<T> {
+    expected_response: Discriminant<ClientMessage>,
+    player_number: usize,
+    mailbox: mpsc::Sender<T>
 }
 
 #[allow(unused_variables)]
 impl Callbacks for ServerBridge {
-    fn choose_card_from_supply(&self, supply: &Supply) -> Option<Box<dyn Card>> {
-        todo!();
+    fn choose_card_from_supply(&self, player_number: usize) -> Option<Box<dyn Card>> {
+        let (tx, mut rx) = mpsc::channel::<Option<Box<dyn Card>>>(1);
+        let response = BridgeResponse {
+            expected_response: mem::discriminant(&ClientMessage::ChooseCard{ card: None }),
+            player_number,
+            mailbox: tx,
+        };
+        let message = serde_json::to_value(ServerMessage::ChooseCardFromSupply).unwrap();
+        let recipients = Recipients::SingleRecipient { recipient: player_number };
+        self.sender.send((message, recipients));
+
+        let event = rx.blocking_recv().unwrap();
+        rx.close();
+        event
     }
     fn choose_card_from_hand(&self, message: &str) -> usize {
         todo!();

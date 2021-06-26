@@ -12,9 +12,12 @@ pub type ClientMessageReceiver = MessageReceiver<ClientMessage>;
 pub type ServerMessageReceiver = MessageReceiver<ServerMessage>;
 pub type ValueSender = MessageSender<Value>;
 
+pub type BroadcastSender = Sender<(Value, Recipients)>;
+pub type BroadcastReceiver = Receiver<(Value, Recipients)>;
+
 pub struct ServerMessageChannels {
-    pub broadcast_sender: Sender<(Value, Recipients)>,
-    pub broadcast_receiver: Receiver<(Value, Recipients)>,
+    pub broadcast_sender: BroadcastSender,
+    pub broadcast_receiver: BroadcastReceiver,
     pub value_sender: ValueSender,
     pub client_message_receiver: ClientMessageReceiver,
 }

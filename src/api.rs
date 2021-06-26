@@ -13,6 +13,7 @@ pub enum ClientMessage {
     EndTurn,
     React { card: Box<dyn Card> },
     NoMoreReactions,
+    ChooseCard { card: Option<Box<dyn Card>> },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -26,6 +27,7 @@ pub enum ServerMessage {
     NotEnoughPlayers,
     NotYourTurn,
     IllegalPlay { card: Box<dyn Card>, reason: IllegalPlayReason },
+    ChooseCardFromSupply,
     NotEnoughCoins,
     SupplyPileEmpty,
 }

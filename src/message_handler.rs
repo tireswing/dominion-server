@@ -51,6 +51,9 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
             let data = data.clone();
             play_card(data, player_number, index, callbacks, message_channels).await;
         }
+        ClientMessage::ChooseCard { card } => {
+
+        }
 
         _ => {
             println!("Server received an unknown message from the client!");

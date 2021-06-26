@@ -14,14 +14,18 @@ use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
 pub async fn main() -> Result<()> {
     // Bind a server socket
     let listener = TcpListener::bind("localhost:31194").await?;
-    let (broadcast_sender, _rx) = broadcast::channel::<(Value, Recipients)>(10);
 
     let data = Arc::new(Mutex::new(Game::new()));
     let mut player_count = 0;
 
-    let bridge = ServerBridge {};
+    let (bridge_sender, _rx) = broadcast::channel::<(Value, Recipients)>(10);
+    let bridge = ServerBridge {
+        sender: bridge_sender.clone(),
+    };
     let callbacks: Box<dyn Callbacks> = Box::new(bridge);
 
+    let (broadcast_sender, _rx) = broadcast::channel::<(Value, Recipients)>(10);
+    let mut join_handles = Vec::new();
     loop {
         let (socket, _addr) = listener.accept().await?;
 
@@ -76,7 +80,7 @@ pub async fn main() -> Result<()> {
 
         let callbacks = callbacks.clone();
 
-        tokio::spawn(async move {
+        let handle =  tokio::spawn(async move {
             loop {
                 tokio::select! {
                     // Handle messages received from the broadcaster and pass them on
@@ -104,5 +108,6 @@ pub async fn main() -> Result<()> {
                 }
             }
         });
+        join_handles.push(handle);
     }
 }
