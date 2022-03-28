@@ -1,4 +1,4 @@
-use dominion::game::prelude::*;
+use dominion::prelude::*;
 
 use serde::{Serialize, Deserialize};
 
@@ -26,14 +26,8 @@ pub enum ServerMessage {
     GameAlreadyStarted,
     NotEnoughPlayers,
     NotYourTurn,
-    IllegalPlay { card: Box<dyn Card>, reason: IllegalPlayReason },
+    IllegalPlay { card: Box<dyn Card>, reason: DominionError },
     ChooseCardFromSupply,
     NotEnoughCoins,
     SupplyPileEmpty,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[non_exhaustive]
-pub enum IllegalPlayReason {
-    WrongPhase,
 }

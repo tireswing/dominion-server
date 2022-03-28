@@ -84,7 +84,7 @@ pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index:
                     serde_json::to_value(
                         ServerMessage::IllegalPlay {
                             card: card.clone(),
-                            reason: IllegalPlayReason::WrongPhase
+                            reason: DominionError::WrongPhase
                         }
                     ).unwrap()).await.unwrap();
             }
@@ -100,7 +100,7 @@ pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index:
                 message_channels.value_sender.send(serde_json::to_value(
                     ServerMessage::IllegalPlay {
                         card: card.clone(),
-                        reason: IllegalPlayReason::WrongPhase
+                        reason: DominionError::WrongPhase
                     }).unwrap()).await.unwrap();
             }
         }
