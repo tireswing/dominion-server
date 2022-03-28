@@ -1,25 +1,32 @@
 use dominion::prelude::*;
 use crate::prelude::*;
 
-use std::mem::{self, Discriminant};
+use std::{mem::{self, Discriminant}, sync::{Arc, Mutex}};
 use tokio::sync::mpsc;
 
 #[derive(Clone, Debug)]
 pub struct ServerBridge {
     pub sender: BroadcastSender,
+    pub waiting_receivers: Arc<Mutex<Vec<BridgeResponseWrapper>>>,
 }
 
-pub struct BridgeResponse<T> {
+#[derive(Clone, Debug)]
+pub struct BridgeResponseWrapper {
     expected_response: Discriminant<ClientMessage>,
     player_number: usize,
-    mailbox: mpsc::Sender<T>
+    mailbox: mpsc::Sender<BridgeResponse>
+}
+
+#[derive(Clone, Debug)]
+pub enum BridgeResponse {
+    Card { card: Option<Box<dyn Card>> }
 }
 
 #[allow(unused_variables)]
 impl Callbacks for ServerBridge {
     fn choose_card_from_supply(&self, player_number: usize) -> Option<Box<dyn Card>> {
-        let (tx, mut rx) = mpsc::channel::<Option<Box<dyn Card>>>(1);
-        let response = BridgeResponse {
+        let (tx, mut rx) = mpsc::channel::<BridgeResponse>(1);
+        let response = BridgeResponseWrapper {
             expected_response: mem::discriminant(&ClientMessage::ChooseCard{ card: None }),
             player_number,
             mailbox: tx,
@@ -28,9 +35,18 @@ impl Callbacks for ServerBridge {
         let recipients = Recipients::SingleRecipient { recipient: player_number };
         self.sender.send((message, recipients));
 
-        let event = rx.blocking_recv().unwrap();
+        let response = rx.blocking_recv().unwrap();
         rx.close();
-        event
+
+        match response {
+            BridgeResponse::Card { card } => {
+                card
+            }
+
+            _ => {
+                panic!("Bad BridgeResponse type!")
+            }
+        }
     }
     fn choose_card_from_hand(&self, message: &str) -> usize {
         todo!();

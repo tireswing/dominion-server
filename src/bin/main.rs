@@ -13,7 +13,7 @@ use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
 #[tokio::main]
 pub async fn main() -> Result<()> {
     // Bind a server socket
-    let listener = TcpListener::bind("localhost:1234").await?;
+    let listener = TcpListener::bind("localhost:31194").await?;
 
     let data = Arc::new(Mutex::new(Game::new()));
     let mut player_count = 0;
@@ -21,8 +21,9 @@ pub async fn main() -> Result<()> {
     let (bridge_sender, _rx) = broadcast::channel::<(Value, Recipients)>(10);
     let bridge = ServerBridge {
         sender: bridge_sender.clone(),
+        waiting_receivers: Arc::new(Mutex::new(Vec::new())),
     };
-    let callbacks: Box<dyn Callbacks> = Box::new(bridge);
+    let bridge: Box<dyn Callbacks> = Box::new(bridge);
 
     let (broadcast_sender, _rx) = broadcast::channel::<(Value, Recipients)>(10);
     let join_handles = Arc::new(Mutex::new(Vec::new()));
@@ -82,7 +83,7 @@ pub async fn main() -> Result<()> {
                 client_message_receiver
             };
     
-            let callbacks = callbacks.clone();
+            let bridge = bridge.clone();
     
             let handle =  tokio::spawn(async move {
                 loop {
@@ -106,7 +107,7 @@ pub async fn main() -> Result<()> {
                         result = message_channels.client_message_receiver.try_next() => {
                             if let Some(msg) = result.unwrap() {
                                 let data = data.clone();
-                                handle_client_message(msg, data, player_number, &callbacks, &mut message_channels).await;
+                                handle_client_message(msg, data, player_number, &bridge, &mut message_channels).await;
                             }
                         }
                     }
