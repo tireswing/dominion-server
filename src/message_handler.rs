@@ -47,17 +47,58 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
                 }
             }
         }
+        ClientMessage::NextPhase => {
+            let data = data.clone();
+            next_phase(data, player_number, callbacks, message_channels).await;
+        }
         ClientMessage::PlayCard { index } => {
             let data = data.clone();
             play_card(data, player_number, index, callbacks, message_channels).await;
         }
-        ClientMessage::ChooseCard { card } => {
-
+        ClientMessage::BuyCard { card } => {
+            let data = data.clone();
+            buy_card(data, player_number, &card, callbacks, message_channels).await;
         }
 
         _ => {
             println!("Server received an unknown message from the client!");
             println!("Message: {:?}", msg);
+        }
+    }
+}
+
+pub async fn next_phase(data: Arc<Mutex<Game>>, player_number: usize, callbacks: &Box<dyn Callbacks>, message_channels: &mut ServerMessageChannels) {
+    let (current_turn, player, phase);
+    {
+        let game = data.lock().unwrap();
+        current_turn = game.current_turn;
+    }
+
+    if current_turn != player_number {
+        message_channels.value_sender.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
+        return;
+    }
+
+    {
+        let mut game = data.lock().unwrap();
+        player = &mut game.players[player_number];
+        phase = player.phase;
+
+        match phase {
+            Phase::ActionPhase => {
+                player.phase = Phase::BuyPhase;
+            }
+            Phase::OutOfTurn => panic!(),
+            Phase::BuyPhase => {
+                player.phase = Phase::NightPhase;
+            }
+            Phase::NightPhase => {
+                player.phase = Phase::CleanupPhase;
+                player.cleanup();
+                player.phase = Phase::OutOfTurn;
+            }
+            Phase::CleanupPhase => panic!(),
+            _ => todo!(),
         }
     }
 }
@@ -87,6 +128,8 @@ pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index:
                             reason: DominionError::WrongPhase
                         }
                     ).unwrap()).await.unwrap();
+
+                return;
             }
 
             let mut game = data.lock().unwrap();
@@ -97,15 +140,64 @@ pub async fn play_card(data: Arc<Mutex<Game>>, player_number: usize, card_index:
         }
         Phase::BuyPhase => {
             if !card.is_treasure() {
-                message_channels.value_sender.send(serde_json::to_value(
-                    ServerMessage::IllegalPlay {
-                        card: card.clone(),
-                        reason: DominionError::WrongPhase
-                    }).unwrap()).await.unwrap();
+                message_channels.value_sender.send(
+                    serde_json::to_value(
+                        ServerMessage::IllegalPlay {
+                            card: card.clone(),
+                            reason: DominionError::CardTypeMisMatch { expected: Treasure }
+                        }
+                    ).unwrap()).await.unwrap();
+
+                return;
+            }
+
+            {
+                let mut game = data.lock().unwrap();
+
+                // We know the card is a treasure card, so unwrap
+                game.play_treasure(player_number, card_index, callbacks).unwrap();
             }
         }
-        _ => {}
+        _ => {
+            message_channels.value_sender.send(
+                serde_json::to_value(
+                    ServerMessage::WrongPhase
+                ).unwrap()).await.unwrap();
+
+            return;
+        }
     }
 
     println!("Player {} played {}!", player_number, card.name());
+}
+
+pub async fn buy_card(data: Arc<Mutex<Game>>, player_number: usize, card: &Box<dyn Card>, callbacks: &Box<dyn Callbacks>, message_channels: &mut ServerMessageChannels) {
+    let (current_turn, player, phase);
+    {
+        let game = data.lock().unwrap();
+        current_turn = game.current_turn;
+        player = &game.players[player_number];
+        phase = player.phase;
+    }
+
+    if current_turn != player_number {
+        message_channels.value_sender.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
+        return;
+    }
+
+    match phase {
+        Phase::BuyPhase => {
+
+        }
+        _ => {
+            message_channels.value_sender.send(
+                serde_json::to_value(
+                    ServerMessage::WrongPhase
+                ).unwrap()).await.unwrap();
+
+            return;
+        }
+    }
+
+    println!("Player {} bought {}!", player_number, card.name());
 }
