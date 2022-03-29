@@ -73,6 +73,8 @@ pub async fn next_phase(data: Arc<Mutex<Game>>, player_number: usize, callbacks:
     {
         let game = data.lock().unwrap();
         current_turn = game.current_turn;
+        player = &game.players[player_number];
+        phase = player.phase;
     }
 
     if current_turn != player_number {
@@ -80,30 +82,30 @@ pub async fn next_phase(data: Arc<Mutex<Game>>, player_number: usize, callbacks:
         return;
     }
 
-    {
-        let mut game = data.lock().unwrap();
-        player = &mut game.players[player_number];
-        phase = player.phase;
-
-        match phase {
-            Phase::ActionPhase => {
-                player.phase = Phase::BuyPhase;
-            }
-            Phase::OutOfTurn => {
-                message_channels.value_sender.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
-                return;
-            }
-            Phase::BuyPhase => {
-                player.phase = Phase::NightPhase;
-            }
-            Phase::NightPhase => {
-                player.phase = Phase::CleanupPhase;
-                player.cleanup();
-                player.phase = Phase::OutOfTurn;
-            }
-            Phase::CleanupPhase => panic!(),
-            _ => todo!(),
+    match phase {
+        Phase::ActionPhase => {
+            let mut game = data.lock().unwrap();
+            let player = &mut game.players[player_number];
+            player.phase = Phase::BuyPhase;
         }
+        Phase::OutOfTurn => {
+            message_channels.value_sender.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
+            return;
+        }
+        Phase::BuyPhase => {
+            let mut game = data.lock().unwrap();
+            let player = &mut game.players[player_number];
+            player.phase = Phase::NightPhase;
+        }
+        Phase::NightPhase => {
+            let mut game = data.lock().unwrap();
+            let player = &mut game.players[player_number];
+            player.phase = Phase::CleanupPhase;
+            player.cleanup();
+            player.phase = Phase::OutOfTurn;
+        }
+        Phase::CleanupPhase => panic!(),
+        _ => todo!(),
     }
 }
 
