@@ -36,6 +36,7 @@ pub async fn handle_client_message(msg: ClientMessage, data: Arc<Mutex<Game>>, p
                         let message = serde_json::to_value(ServerMessage::StartingGame { state }).unwrap();
                         message_channels.broadcast_sender.send((message, recipients)).unwrap();
                     }
+                    game.players[0].phase = Phase::ActionPhase;
                 }
                 Err(NotEnoughPlayers) => {
                     let recipients = Recipients::SingleRecipient { recipient: player_number };
@@ -88,7 +89,10 @@ pub async fn next_phase(data: Arc<Mutex<Game>>, player_number: usize, callbacks:
             Phase::ActionPhase => {
                 player.phase = Phase::BuyPhase;
             }
-            Phase::OutOfTurn => panic!(),
+            Phase::OutOfTurn => {
+                message_channels.value_sender.send(serde_json::to_value(ServerMessage::NotYourTurn).unwrap()).await.unwrap();
+                return;
+            }
             Phase::BuyPhase => {
                 player.phase = Phase::NightPhase;
             }
